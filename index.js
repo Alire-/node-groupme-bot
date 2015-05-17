@@ -20,7 +20,7 @@ unirest   = require('unirest');
 
 router = new director.http.Router({
   '/' : {
-    post: getResponse,
+    post: postResponse,
     get: getResponse
   }
 });
@@ -70,7 +70,7 @@ function getSmmry(url) {
 	});
 }
 
-function getResponse() {
+function postResponse() {
     var data, output, url;
     
     console.log("parsing incoming data...");
@@ -138,7 +138,10 @@ function postMessage(message) {
   botReq.end(JSON.stringify(body));
 }
 
-
+function getResponse() {
+  this.res.writeHead(200);
+  this.res.end("Running KANE bot v0.1");
+}
 /*
     &SM_API_KEY=xxxx      // Mandatory, N represents your registered API key.
     &SM_URL=X                   // Optional, X represents the webpage to summarize.
