@@ -1,16 +1,22 @@
 /// many thanks to Jan Hammer
+"use strict";
 
 var http, HTTPS, director, router, server, port;
 var unirest;
 
-var botID  = process.env.BOT_ID;
-var apiKey = process.env.API_KEY;
-var senderID = process.env.SENDER_ID;
+// groupme config
+var gmBotID  = process.env.GM_BOT_ID; // groupme bot id
+var gmSenderID = process.env.GM_SENDER_ID; // bot's groupme sender id
 
-http        = require('http');
-HTTPS 	    = require('https');
-director    = require('director');
-unirest     = require('unirest');
+// summary config
+var smApiKey = process.env.SM_API_KEY; // smmry api key
+var smSentences = 2; // number of sentences to get from smmry
+
+
+http      = require('http');
+HTTPS     = require('https');
+director  = require('director');
+unirest   = require('unirest');
 
 router = new director.http.Router({
   '/' : {
@@ -33,32 +39,68 @@ server = http.createServer(function (req, res) {
 
 port = Number(process.env.PORT || 5000);
 server.listen(port);
+
 ////////////////////////////////////////////////////////////////////////////////////
+/// move out to bot.js
+////////////////////////////////////////////////////////////////////////////////////
+function urlCheck(text) {
+    console.log("checking for url...");
+    // you can get really complex with this regex, feel free to change it if this doesn't work for you
+    var urlRegex =/(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+    var result = null;
+    
+    if ((result = urlRegex.exec(text)) !== null) {
+        console.log("url found...");
+        return result[0]; // only return first match
+    } else {
+        console.log("no url found...");
+        return null;
+    }
+}
+
+function getSmmry(url) {
+  console.log("querying smmry...");
+  console.log(url);
+	unirest.get("http://api.smmry.com/")
+	.query({ SM_API_KEY: smApiKey, SM_URL: url, SM_LENGTH: smSentences, SM_WITH_BREAK: '' })
+	.end(function (response) {
+	    console.log("returning smmry response...");
+	    postMessage(response.body['sm_api_content']);
+	  	return response;
+	});
+}
 
 function getResponse() {
+    var data, output, url;
+    
     console.log("parsing incoming data...");
-    var data = JSON.parse(this.req.chunks);
+    data = JSON.parse(this.req.chunks);
+    //console.log(data);
     
-    console.log(data);
-
-	if (data['sender_id'] != senderID) {
-	    var output, bbb;
-	    
-	    console.log("looking for a url...");
-    	
-    	output = '';
-    
-    	bbb = unirest.get("http://api.smmry.com/")
-    	.query({ SM_API_KEY: apiKey, SM_URL: "http://www.reddit.com/r/IAmA/comments/3627lf/im_male_model_jim_gaffigan_ama/cr9zsc1", SM_LENGTH: 3 })
-    	.end(function (response) {
-    	  	postMessage(response.body['sm_api_content']);
-    	  	console.log("response sent!");
-    	});
+    if (data['sender_id'] !== gmSenderID) {
+      // find a url
+      url = urlCheck(data['text']);
+      
+      if (url !== null) {
+          console.log("found url...");
+          getSmmry(url);
+      } 
     } else {
-        console.log("ignoring self text!");
+      console.log("ignoring self text!");
     }
-	
+    
+    
+    // check for twitter pic
+    // twitterCheck()
+    
+    // move on to smmry check
+    // smmryCheck()
+    
+    // some kind of stats for a picture or something
 
+    // seen
+    
+    // remind me
 }
 
 function postMessage(message) {
@@ -73,11 +115,11 @@ function postMessage(message) {
   };
 
   body = {
-    "bot_id" : botID,
-    "text" : '"' + message + '"'
+    "bot_id" : gmBotID,
+    "text" : message
   };
 
-  console.log('sending ' + message + ' to ' + botID);
+  //console.log('sending ' + message + ' to ' + botID);
 
   botReq = HTTPS.request(options, function(res) {
       if(res.statusCode == 202) {
