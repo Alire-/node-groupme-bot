@@ -1,31 +1,30 @@
 /// many thanks to Jan Hammer
 "use strict";
 
-var http, HTTPS, director, router, server, port;
-var unirest;
-
 // groupme config
-var gmBotID  = process.env.GM_BOT_ID; // groupme bot id
+var gmBotID    = process.env.GM_BOT_ID; // groupme bot id
 var gmSenderID = process.env.GM_SENDER_ID; // bot's groupme sender id
 
 // summary config
-var smApiKey = process.env.SM_API_KEY; // smmry api key
+var smApiKey    = process.env.SM_API_KEY; // smmry api key
 var smSentences = 2; // number of sentences to get from smmry
 
+// required modules 
+var http      = require('http');
+var HTTPS     = require('https');
+var director  = require('director');
+var unirest   = require('unirest');
 
-http      = require('http');
-HTTPS     = require('https');
-director  = require('director');
-unirest   = require('unirest');
-
-router = new director.http.Router({
+// set routing paths
+var router = new director.http.Router({
   '/' : {
     post: postResponse,
     get: getResponse
   }
 });
 
-server = http.createServer(function (req, res) {
+// start listening server
+var server = http.createServer(function (req, res) {
   req.chunks = [];
   req.on('data', function (chunk) {
     req.chunks.push(chunk.toString());
@@ -37,8 +36,13 @@ server = http.createServer(function (req, res) {
   });
 });
 
-port = Number(process.env.PORT || 5000);
+var port = Number(process.env.PORT || 5000);
 server.listen(port);
+
+function getResponse() {
+  this.res.writeHead(200);
+  this.res.end("KANE v0.1");
+}
 
 ////////////////////////////////////////////////////////////////////////////////////
 /// move out to bot.js
@@ -61,12 +65,18 @@ function urlCheck(text) {
 function getSmmry(url) {
   console.log("querying smmry...");
   console.log(url);
+  
 	unirest.get("http://api.smmry.com/")
 	.query({ SM_API_KEY: smApiKey, SM_URL: url, SM_LENGTH: smSentences, SM_WITH_BREAK: '' })
 	.end(function (response) {
-	    console.log("returning smmry response...");
-	    postMessage(response.body['sm_api_content']);
-	  	return response;
+	  var data = response.body;
+    // need to split messages based on charater count
+    console.log("parsing smmry response...");
+    console.log(data['sm_api_character_count']);
+    console.log(data['sm_api_error']);
+    console.log(data['sm_api_keyword_array']);
+
+    postMessage(data['sm_api_content']);
 	});
 }
 
@@ -93,9 +103,6 @@ function postResponse() {
     // check for twitter pic
     // twitterCheck()
     
-    // move on to smmry check
-    // smmryCheck()
-    
     // some kind of stats for a picture or something
 
     // seen
@@ -104,10 +111,9 @@ function postResponse() {
 }
 
 function postMessage(message) {
-  var botResponse, options, body, botReq;
+  var options, body, botReq;
 
-  botResponse = "bot response here";
-
+  
   options = {
     hostname: 'api.groupme.com',
     path: '/v3/bots/post',
@@ -122,7 +128,7 @@ function postMessage(message) {
   //console.log('sending ' + message + ' to ' + botID);
 
   botReq = HTTPS.request(options, function(res) {
-      if(res.statusCode == 202) {
+      if (res.statusCode === 202) {
         //neat
       } else {
         console.log('rejecting bad status code ' + res.statusCode);
@@ -135,13 +141,10 @@ function postMessage(message) {
   botReq.on('timeout', function(err) {
     console.log('timeout posting message '  + JSON.stringify(err));
   });
+  
   botReq.end(JSON.stringify(body));
 }
 
-function getResponse() {
-  this.res.writeHead(200);
-  this.res.end("Running KANE bot v0.1");
-}
 /*
     &SM_API_KEY=xxxx      // Mandatory, N represents your registered API key.
     &SM_URL=X                   // Optional, X represents the webpage to summarize.
