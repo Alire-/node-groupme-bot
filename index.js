@@ -53,7 +53,7 @@ function getResponse() {
 function urlCheck(text) {
     console.log("checking for url...");
     // you can get really complex with this regex, feel free to change it if this doesn't work for you
-    var urlRegex =/(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+    var urlRegex =/(\b(https?|ftp|http|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
     var result = null;
     
     if ((result = urlRegex.exec(text)) !== null) {
